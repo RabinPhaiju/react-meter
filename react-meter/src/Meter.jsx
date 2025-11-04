@@ -118,15 +118,15 @@ const Meter = () => {
   }, []);
 
   const handleDec = useCallback(() => {
-    setValue(prev => Number((prev - STEP).toFixed(3)));
+    setValue(prev => Math.max(0, Number((prev - STEP).toFixed(3))));
   }, []);
 
   const handleInc05 = useCallback(() => {
-    setValue(prev => Number((prev + 10.5).toFixed(3)));
+    setValue(prev => Number((prev + 0.5).toFixed(3)));
   }, []);
 
   const handleDec05 = useCallback(() => {
-    setValue(prev => Number((prev - 10.5).toFixed(3)));
+    setValue(prev => Math.max(0, Number((prev - 0.5).toFixed(3))));
   }, []);
 
   return (
