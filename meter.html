@@ -18,6 +18,8 @@
   <div class="controls">
     <button id="dec">−0.01</button>
     <button id="inc">+0.01</button>
+    <button id="dec05">−0.5</button>
+    <button id="inc05">+0.5</button>
   </div>
 
   <script>
@@ -79,6 +81,16 @@
 
     document.getElementById('dec').addEventListener('click', () => {
       value = Number((value - STEP).toFixed(3));
+      updateCounter();
+    });
+
+    document.getElementById('inc05').addEventListener('click', () => {
+      value = Number((value + 0.2).toFixed(3));
+      updateCounter();
+    });
+
+    document.getElementById('dec05').addEventListener('click', () => {
+      value = Number((value - 0.5).toFixed(3));
       updateCounter();
     });
 
