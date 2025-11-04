@@ -1,112 +1,120 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './style.css';
+
+const DIGIT_HEIGHT = 80;
+const DIGIT_REPEAT = 20;
+const DIGIT_VALUES = 10;
+const STEP = 0.01;
+const MIN_VALUE = 0;
+const MAX_VALUE = 999.999;
 
 const Meter = () => {
   const [value, setValue] = useState(7.53);
-  const [decimalOffset, setDecimalOffset] = useState(0);
-  const [previousFractional, setPreviousFractional] = useState(0);
-  const [hundredsOffset, setHundredsOffset] = useState(0);
-  const [tensOffset, setTensOffset] = useState(0);
-  const [unitsOffset, setUnitsOffset] = useState(0);
-  const [previousDigits, setPreviousDigits] = useState([0, 0, 0]);
-
-  const digitHeight = 80;
-  const DIGIT_REPEAT = 20;
-  const DIGIT_VALUES = 10;
-  const STEP = 0.01;
-  const MIN_VALUE = 0;
-  const MAX_VALUE = 999.999;
+  const [offsets, setOffsets] = useState({
+    decimal: 0,
+    hundreds: 0,
+    tens: 0,
+    units: 0
+  });
+  const [previousState, setPreviousState] = useState({
+    fractional: 0,
+    digits: [0, 0, 0]
+  });
 
   const digitStripsRef = useRef([]);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
-    // Generate digit strips
+    if (isInitializedRef.current) return;
+    
     const wrappers = document.querySelectorAll('.digit-wrapper');
+    const fragment = document.createDocumentFragment();
+    
     wrappers.forEach((wrapper, index) => {
       const strip = document.createElement('div');
       strip.className = 'digit-strip';
-      for (let repeat = 0; repeat < DIGIT_REPEAT; repeat += 1) {
-        for (let digit = 0; digit < DIGIT_VALUES; digit += 1) {
+      
+      for (let repeat = 0; repeat < DIGIT_REPEAT; repeat++) {
+        for (let digit = 0; digit < DIGIT_VALUES; digit++) {
           const cell = document.createElement('div');
           cell.className = 'digit';
           cell.textContent = digit;
           strip.appendChild(cell);
         }
       }
+      
+      strip.classList.add('smooth');
       wrapper.appendChild(strip);
       digitStripsRef.current[index] = strip;
     });
-    updateCounter();
+    
+    isInitializedRef.current = true;
   }, []);
 
   const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 
-  const updateCounter = () => {
+  const updateCounter = useCallback(() => {
+    if (!digitStripsRef.current.length) return;
+
     const safeValue = clamp(value, MIN_VALUE, MAX_VALUE);
     const intPart = Math.floor(safeValue);
     const fractional = safeValue - intPart;
 
-    let newDecimalOffset = decimalOffset;
-    if (fractional < previousFractional) {
-      newDecimalOffset += 10;
-      setDecimalOffset(newDecimalOffset);
-    }
-    setPreviousFractional(fractional);
+    const newOffsets = { ...offsets };
 
+    // Update decimal offset
+    if (fractional < previousState.fractional) {
+      newOffsets.decimal += 10;
+    }
+
+    // Calculate current digits
     const digits = [
       Math.floor(intPart / 100) % 10,
       Math.floor(intPart / 10) % 10,
       intPart % 10
     ];
 
-    let newHundredsOffset = hundredsOffset;
-    let newTensOffset = tensOffset;
-    let newUnitsOffset = unitsOffset;
-    for (let i = 2; i >= 0; i--) {
-      if (digits[i] < previousDigits[i]) {
-        if (i === 0) newHundredsOffset += 10;
-        else if (i === 1) newTensOffset += 10;
-        else newUnitsOffset += 10;
+    // Update integer offsets
+    digits.forEach((digit, i) => {
+      if (digit < previousState.digits[i]) {
+        const key = ['hundreds', 'tens', 'units'][i];
+        newOffsets[key] += 10;
       }
-    }
-    setPreviousDigits(digits);
-    setHundredsOffset(newHundredsOffset);
-    setTensOffset(newTensOffset);
-    setUnitsOffset(newUnitsOffset);
-
-    digitStripsRef.current.slice(0, 3).forEach((strip, index) => {
-      let offset = 0;
-      if (index === 0) offset = newHundredsOffset;
-      else if (index === 1) offset = newTensOffset;
-      else offset = newUnitsOffset;
-      strip.style.transform = `translateY(${-(digits[index] + offset) * digitHeight}px)`;
     });
 
-    const decimalPosition = fractional * 10 + newDecimalOffset;
-    digitStripsRef.current[3].style.transform = `translateY(${-decimalPosition * digitHeight}px)`;
-  };
+    // Batch state updates
+    setOffsets(newOffsets);
+    setPreviousState({ fractional, digits });
+
+    // Apply transforms
+    const stripOffsets = [newOffsets.hundreds, newOffsets.tens, newOffsets.units];
+    digitStripsRef.current.slice(0, 3).forEach((strip, index) => {
+      strip.style.transform = `translateY(${-(digits[index] + stripOffsets[index]) * DIGIT_HEIGHT}px)`;
+    });
+
+    const decimalPosition = fractional * 10 + newOffsets.decimal;
+    digitStripsRef.current[3].style.transform = `translateY(${-decimalPosition * DIGIT_HEIGHT}px)`;
+  }, [value, offsets, previousState]);
 
   useEffect(() => {
-    if (digitStripsRef.current.length > 0) {
-      updateCounter();
-    }
-  }, [value, decimalOffset, hundredsOffset, tensOffset, unitsOffset]);
+    updateCounter();
+  }, [value]);
 
-  const handleInc = () => {
-    setValue(Number((value + STEP).toFixed(3)));
-  };
+  const handleInc = useCallback(() => {
+    setValue(prev => Number((prev + STEP).toFixed(3)));
+  }, []);
 
-  const handleDec = () => {
-    setValue(Number((value - STEP).toFixed(3)));
-  };
+  const handleDec = useCallback(() => {
+    setValue(prev => Number((prev - STEP).toFixed(3)));
+  }, []);
 
-  const handleInc05 = () => {
-    setValue(Number((value + 0.5).toFixed(3)));
-  };
+  const handleInc05 = useCallback(() => {
+    setValue(prev => Number((prev + 0.5).toFixed(3)));
+  }, []);
 
-  const handleDec05 = () => {
-    setValue(Number((value - 0.5).toFixed(3)));
-  };
+  const handleDec05 = useCallback(() => {
+    setValue(prev => Number((prev - 0.5).toFixed(3)));
+  }, []);
 
   return (
     <>
