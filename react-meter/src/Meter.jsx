@@ -3,18 +3,19 @@ import './style.css';
 
 const DIGIT_HEIGHT = 80;
 const DIGIT_REPEAT = 20;
+
 const DIGIT_VALUES = 10;
-const STEP = 0.15;
+const STEP = 0.1;
 const MIN_VALUE = 0;
 const MAX_VALUE = 999.999;
 
 const Meter = () => {
-  const [value, setValue] = useState(7.53);
+  const [value, setValue] = useState(7.5);
   const [offsets, setOffsets] = useState({
-    decimal: DIGIT_REPEAT / 2,
-    hundreds: DIGIT_REPEAT / 2,
-    tens: DIGIT_REPEAT / 2,
-    units: DIGIT_REPEAT / 2
+    decimal: DIGIT_REPEAT,
+    hundreds: DIGIT_REPEAT,
+    tens: DIGIT_REPEAT,
+    units: DIGIT_REPEAT
   });
   const [previousState, setPreviousState] = useState({
     fractional: 0,
@@ -58,7 +59,7 @@ const Meter = () => {
 
     const safeValue = clamp(value, MIN_VALUE, MAX_VALUE);
     const intPart = Math.floor(safeValue);
-    const fractional = safeValue - intPart;
+    const fractional = Math.round((safeValue - intPart) * 1000) / 1000;
 
     const newOffsets = { ...offsets };
 
@@ -105,7 +106,21 @@ const Meter = () => {
       strip.style.transform = `translateY(${-(digits[index] + stripOffsets[index]) * DIGIT_HEIGHT}px)`;
     });
 
-    const decimalPosition = fractional * 10 + newOffsets.decimal;
+    let decimalPosition = fractional * 10 + newOffsets.decimal;
+    
+    // Wrap decimal position if it goes beyond limits
+    const totalDecimalDigits = DIGIT_REPEAT * DIGIT_VALUES;
+    // Wrap to the other end if we reach the edge
+    if (decimalPosition >= totalDecimalDigits) {
+      newOffsets.decimal = 0;
+      decimalPosition = 0;
+      setOffsets(newOffsets);
+    } else if (decimalPosition < 0) {
+      newOffsets.decimal = totalDecimalDigits - DIGIT_VALUES;
+      decimalPosition = totalDecimalDigits - 1;
+      setOffsets(newOffsets);
+    }
+    
     digitStripsRef.current[3].style.transform = `translateY(${-decimalPosition * DIGIT_HEIGHT}px)`;
   }, [value, offsets, previousState]);
 
@@ -114,7 +129,7 @@ const Meter = () => {
   }, [value]);
 
   const handleInc = useCallback(() => {
-    setValue(prev => Number((prev + STEP).toFixed(3)));
+    setValue(prev => Math.max(0, Number((prev + STEP).toFixed(3))));
   }, []);
 
   const handleDec = useCallback(() => {
@@ -122,7 +137,7 @@ const Meter = () => {
   }, []);
 
   const handleInc05 = useCallback(() => {
-    setValue(prev => Number((prev + 0.5).toFixed(3)));
+    setValue(prev => Math.max(0, Number((prev + 0.5).toFixed(3))));
   }, []);
 
   const handleDec05 = useCallback(() => {
