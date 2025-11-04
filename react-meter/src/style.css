@@ -35,9 +35,9 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.5);
     }
 
-    .digit-wrapper[data-role="decimal"] {
+    /* .digit-wrapper[data-role="decimal"] { */
       /* background: rgba(255, 0, 0, 0.8); */
-    }
+    /* } */
 
     .digit-wrapper[data-role="decimal"] .digit {
       color: rgb(255, 57, 57);
@@ -54,8 +54,15 @@
       will-change: transform;
     }
 
-    .digit-strip.smooth {
-      transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+    .digit-strip-edge {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.05s cubic-bezier(1, 0, 1, 1);
+      will-change: transform;
     }
 
     .digit {

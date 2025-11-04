@@ -12,10 +12,10 @@ const Meter = ({ value: propValue, onChange, initialValue = 0 }) => {
   const [internalValue, setInternalValue] = useState(initialValue);
   const value = propValue !== undefined ? propValue : internalValue;
   const [offsets, setOffsets] = useState({
-    decimal: DIGIT_REPEAT,
     hundreds: DIGIT_REPEAT,
-    tens: DIGIT_REPEAT,
-    units: DIGIT_REPEAT
+    tens: DIGIT_REPEAT * 6,
+    units: DIGIT_REPEAT * 6,
+    decimal: DIGIT_REPEAT * 6,
   });
   const [previousState, setPreviousState] = useState({
     fractional: 0,
@@ -43,7 +43,6 @@ const Meter = ({ value: propValue, onChange, initialValue = 0 }) => {
         }
       }
       
-      strip.classList.add('smooth');
       wrapper.appendChild(strip);
       digitStripsRef.current[index] = strip;
     });
@@ -62,78 +61,74 @@ const Meter = ({ value: propValue, onChange, initialValue = 0 }) => {
 
     const newOffsets = { ...offsets };
 
-    // Update decimal offset with bidirectional wrap detection
-    const fracDiff = fractional - previousState.fractional;
-    if (fracDiff < -0.5) {
-      // Wrapped forward (e.g. 0.99 -> 0.00) when incrementing
-      newOffsets.decimal += 10;
-    } else if (fracDiff > 0.5) {
-      // Wrapped backward (e.g. 0.00 -> 0.99) when decrementing
-      newOffsets.decimal -= 10;
-    }
-
-    // Calculate current digits
+    // Calculate current digits (decimal, hundreds, tens, units)
     const digits = [
-      Math.floor(intPart / 100) % 10,
-      Math.floor(intPart / 10) % 10,
-      intPart % 10
+      Math.floor(intPart / 100) % 10, // hundreds
+      Math.floor(intPart / 10) % 10, // tens
+      intPart % 10, // units
+      fractional * 10, // decimal
     ];
 
-    // Update integer offsets with bidirectional support
+    const prevDigits = [
+      previousState.digits[0], // previous hundreds
+      previousState.digits[1], // previous tens
+      previousState.digits[2], // previous units
+      previousState.fractional * 10 // previous decimal
+    ];
+
+    const keys = ['hundreds', 'tens', 'units','decimal'];
+    const totalDigits = DIGIT_REPEAT * DIGIT_VALUES;
+
+    // Update all digit offsets with unified wrap logic
     digits.forEach((digit, i) => {
-      const prevDigit = previousState.digits[i];
+      const prevDigit = prevDigits[i];
       const digitDiff = digit - prevDigit;
 
-      if (digitDiff < -5 || (digitDiff < 0 && prevDigit - digit > 1)) {
-        // Wrapped forward: 9->0 or smooth decrement
-        const key = ['hundreds', 'tens', 'units'][i];
-        newOffsets[key] += 10;
-      } else if (digitDiff > 5 || (digitDiff > 0 && digit - prevDigit > 1)) {
-        // Wrapped backward: 0->9 or smooth increment
-        const key = ['hundreds', 'tens', 'units'][i];
-        newOffsets[key] -= 10;
+      if (digitDiff < -5) {
+        // Wrapped forward (e.g. 9->0)
+        newOffsets[keys[i]] += 10;
+      } else if (digitDiff > 5) {
+        // Wrapped backward (e.g. 0->9)
+        newOffsets[keys[i]] -= 10;
       }
+
+      // Calculate position with offset
+      let position = digit + newOffsets[keys[i]];
+
+      // Wrap to opposite side if at edge
+      let isAtEdge = false;
+      if (position >= totalDigits) {
+        newOffsets[keys[i]] = 0;
+        position = digit;
+        isAtEdge = true;
+      } else if (position < 0) {
+        newOffsets[keys[i]] = totalDigits - DIGIT_VALUES;
+        position = digit + newOffsets[keys[i]];
+        isAtEdge = true;
+      }
+
+      // If at edge and wrapping, apply direct animation (no transition)
+      const strip = digitStripsRef.current[i];
+      if (isAtEdge) {
+        strip.style.transition = 'transform 0.13s cubic-bezier(0.33, 1, 0.68, 1)';
+        strip.style.transform = `translateY(${-position * DIGIT_HEIGHT}px)`;
+        void strip.offsetWidth;
+        strip.style.transition = '';
+      } else {
+        strip.style.transition = '';
+        strip.style.transform = `translateY(${-position * DIGIT_HEIGHT}px)`;
+      }
+
     });
 
-    
-    // Wrap integer offsets if beyond limits (same as decimal)
-    const totalDigits = DIGIT_REPEAT * DIGIT_VALUES;
-    ['hundreds', 'tens', 'units'].forEach(key => {
-      if (newOffsets[key] >= totalDigits) {
-      newOffsets[key] = 0;
-      } else if (newOffsets[key] < 0) {
-      newOffsets[key] = totalDigits - DIGIT_VALUES;
-      }
-    });
+    // Update state
     setOffsets(newOffsets);
-
-    // Batch state updates
-    // setPreviousState({ fractional, digits });
-
-    // Apply transforms
-    const stripOffsets = [newOffsets.hundreds, newOffsets.tens, newOffsets.units];
-    digitStripsRef.current.slice(0, 3).forEach((strip, index) => {
-      strip.style.transform = `translateY(${-(digits[index] + stripOffsets[index]) * DIGIT_HEIGHT}px)`;
+    setPreviousState({ 
+      fractional, 
+      digits: [digits[0], digits[1], digits[2]]
     });
-
-    let decimalPosition = fractional * 10 + newOffsets.decimal;
-    
-    // Wrap decimal position if it goes beyond limits
-    const totalDecimalDigits = DIGIT_REPEAT * DIGIT_VALUES;
-    // Wrap to the other end if we reach the edge
-    if (decimalPosition >= totalDecimalDigits) {
-      newOffsets.decimal = 0;
-      decimalPosition = 0;
-      setOffsets(newOffsets);
-    } else if (decimalPosition < 0) {
-      newOffsets.decimal = totalDecimalDigits - DIGIT_VALUES;
-      decimalPosition = totalDecimalDigits - 1;
-      setOffsets(newOffsets);
-    }
-    
-    digitStripsRef.current[3].style.transform = `translateY(${-decimalPosition * DIGIT_HEIGHT}px)`;
   }, [value, offsets, previousState]);
-
+  
   useEffect(() => {
     updateCounter();
   }, [value]);
