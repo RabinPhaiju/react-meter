@@ -5,7 +5,7 @@ const DIGIT_HEIGHT = 80;
 const DIGIT_REPEAT = 20;
 
 const DIGIT_VALUES = 10;
-const STEP = 0.1;
+const STEP = 0.15;
 const MIN_VALUE = 0;
 const MAX_VALUE = 999.999;
 
