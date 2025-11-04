@@ -51,7 +51,7 @@
       return strip;
     });
 
-    let value = 7.53;
+    let value = 7.5;
 
     const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 
@@ -85,12 +85,12 @@
     });
 
     document.getElementById('inc05').addEventListener('click', () => {
-      value = Number((value + 0.2).toFixed(3));
+      value = Number((value + 0.4).toFixed(3));
       updateCounter();
     });
 
     document.getElementById('dec05').addEventListener('click', () => {
-      value = Number((value - 0.5).toFixed(3));
+      value = Number((value - 0.4).toFixed(3));
       updateCounter();
     });
 
