@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analog Water Meter Counter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="counter-container" id="counter">
+    <div class="digit-wrapper" data-role="hundreds"></div>
+    <div class="digit-wrapper" data-role="tens"></div>
+    <div class="digit-wrapper" data-role="units"></div>
+    <div class="decimal-point">.</div>
+    <div class="digit-wrapper" data-role="decimal"></div>
+  </div>
+
+  <div class="controls">
+    <button id="dec">−0.01</button>
+    <button id="inc">+0.01</button>
+  </div>
+
+  <script>
+    const DIGIT_REPEAT = 2;
+    const DIGIT_VALUES = 10;
+    const STEP = 0.01;
+    const MIN_VALUE = 0;
+    const MAX_VALUE = 999.999;
+
+    const digitHeight = parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue("--digit-height")) || 80;
+
+    const counter = document.getElementById('counter');
+    const wrappers = Array.from(counter.querySelectorAll('.digit-wrapper'));
+
+    // Pre-build digit strips to avoid manual markup duplication.
+    const digitStrips = wrappers.map(wrapper => {
+      const strip = document.createElement('div');
+      strip.className = 'digit-strip';
+      for (let repeat = 0; repeat < DIGIT_REPEAT; repeat += 1) {
+        for (let digit = 0; digit < DIGIT_VALUES; digit += 1) {
+          const cell = document.createElement('div');
+          cell.className = 'digit';
+          cell.textContent = digit;
+          strip.appendChild(cell);
+        }
+      }
+      wrapper.appendChild(strip);
+      return strip;
+    });
+
+    let value = 7.53;
+
+    const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+
+    function updateCounter() {
+      const safeValue = clamp(value, MIN_VALUE, MAX_VALUE);
+      const intPart = Math.floor(safeValue);
+      const fractional = safeValue - intPart;
+
+      const digits = [
+        Math.floor(intPart / 100) % 10,
+        Math.floor(intPart / 10) % 10,
+        intPart % 10
+      ];
+
+      digitStrips.slice(0, 3).forEach((strip, index) => {
+        strip.style.transform = `translateY(${-digits[index] * digitHeight}px)`;
+      });
+
+      const decimalPosition = fractional * 10;
+      digitStrips[3].style.transform = `translateY(${-decimalPosition * digitHeight}px)`;
+    }
+
+    document.getElementById('inc').addEventListener('click', () => {
+      value = Number((value + STEP).toFixed(3));
+      updateCounter();
+    });
+
+    document.getElementById('dec').addEventListener('click', () => {
+      value = Number((value - STEP).toFixed(3));
+      updateCounter();
+    });
+
+    updateCounter();
+  </script>
+</body>
+</html>
