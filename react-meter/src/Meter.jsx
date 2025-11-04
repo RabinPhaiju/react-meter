@@ -2,19 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './style.css';
 
 const DIGIT_HEIGHT = 80;
-const DIGIT_REPEAT = 20;
+const DIGIT_REPEAT = 100;
 const DIGIT_VALUES = 10;
-const STEP = 0.01;
+const STEP = 0.15;
 const MIN_VALUE = 0;
 const MAX_VALUE = 999.999;
 
 const Meter = () => {
   const [value, setValue] = useState(7.53);
   const [offsets, setOffsets] = useState({
-    decimal: 0,
-    hundreds: 0,
-    tens: 0,
-    units: 0
+    decimal: DIGIT_REPEAT / 2,
+    hundreds: DIGIT_REPEAT / 2,
+    tens: DIGIT_REPEAT / 2,
+    units: DIGIT_REPEAT / 2
   });
   const [previousState, setPreviousState] = useState({
     fractional: 0,
@@ -65,6 +65,10 @@ const Meter = () => {
     // Update decimal offset
     if (fractional < previousState.fractional) {
       newOffsets.decimal += 10;
+    } else if (fractional > previousState.fractional && previousState.fractional > 0.9 && fractional < 0.1) {
+      // Skip offset adjustment when wrapping forward
+    } else if (fractional > previousState.fractional && previousState.fractional < 0.1 && fractional > 0.9) {
+      newOffsets.decimal -= 10;
     }
 
     // Calculate current digits
@@ -74,11 +78,19 @@ const Meter = () => {
       intPart % 10
     ];
 
-    // Update integer offsets
+    // Update integer offsets with bidirectional support
     digits.forEach((digit, i) => {
-      if (digit < previousState.digits[i]) {
+      const prevDigit = previousState.digits[i];
+      const digitDiff = digit - prevDigit;
+
+      if (digitDiff < -5 || (digitDiff < 0 && prevDigit - digit > 1)) {
+        // Wrapped forward: 9->0 or smooth decrement
         const key = ['hundreds', 'tens', 'units'][i];
         newOffsets[key] += 10;
+      } else if (digitDiff > 5 || (digitDiff > 0 && digit - prevDigit > 1)) {
+        // Wrapped backward: 0->9 or smooth increment
+        const key = ['hundreds', 'tens', 'units'][i];
+        newOffsets[key] -= 10;
       }
     });
 
