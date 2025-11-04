@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './style.css';
 
 const DIGIT_HEIGHT = 80;
-const DIGIT_REPEAT = 100;
+const DIGIT_REPEAT = 20;
 const DIGIT_VALUES = 10;
 const STEP = 0.15;
 const MIN_VALUE = 0;
@@ -62,12 +62,13 @@ const Meter = () => {
 
     const newOffsets = { ...offsets };
 
-    // Update decimal offset
-    if (fractional < previousState.fractional) {
+    // Update decimal offset with bidirectional wrap detection
+    const fracDiff = fractional - previousState.fractional;
+    if (fracDiff < -0.5) {
+      // Wrapped forward (e.g. 0.99 -> 0.00) when incrementing
       newOffsets.decimal += 10;
-    } else if (fractional > previousState.fractional && previousState.fractional > 0.9 && fractional < 0.1) {
-      // Skip offset adjustment when wrapping forward
-    } else if (fractional > previousState.fractional && previousState.fractional < 0.1 && fractional > 0.9) {
+    } else if (fracDiff > 0.5) {
+      // Wrapped backward (e.g. 0.00 -> 0.99) when decrementing
       newOffsets.decimal -= 10;
     }
 
@@ -121,11 +122,11 @@ const Meter = () => {
   }, []);
 
   const handleInc05 = useCallback(() => {
-    setValue(prev => Number((prev + 0.5).toFixed(3)));
+    setValue(prev => Number((prev + 10.5).toFixed(3)));
   }, []);
 
   const handleDec05 = useCallback(() => {
-    setValue(prev => Number((prev - 0.5).toFixed(3)));
+    setValue(prev => Number((prev - 10.5).toFixed(3)));
   }, []);
 
   return (
