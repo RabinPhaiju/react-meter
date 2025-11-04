@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './style.css';
 
 const DIGIT_HEIGHT = 80;
-const DIGIT_REPEAT = 20;
+const DIGIT_REPEAT = 10;
 
 const DIGIT_VALUES = 10;
-const STEP = 0.15;
 const MIN_VALUE = 0;
 const MAX_VALUE = 999.999;
 
-const Meter = () => {
-  const [value, setValue] = useState(7.5);
+const Meter = ({ value: propValue, onChange, initialValue = 0 }) => {
+  const [internalValue, setInternalValue] = useState(initialValue);
+  const value = propValue !== undefined ? propValue : internalValue;
   const [offsets, setOffsets] = useState({
     decimal: DIGIT_REPEAT,
     hundreds: DIGIT_REPEAT,
@@ -29,7 +29,6 @@ const Meter = () => {
     if (isInitializedRef.current) return;
     
     const wrappers = document.querySelectorAll('.digit-wrapper');
-    const fragment = document.createDocumentFragment();
     
     wrappers.forEach((wrapper, index) => {
       const strip = document.createElement('div');
@@ -96,9 +95,20 @@ const Meter = () => {
       }
     });
 
-    // Batch state updates
+    
+    // Wrap integer offsets if beyond limits (same as decimal)
+    const totalDigits = DIGIT_REPEAT * DIGIT_VALUES;
+    ['hundreds', 'tens', 'units'].forEach(key => {
+      if (newOffsets[key] >= totalDigits) {
+      newOffsets[key] = 0;
+      } else if (newOffsets[key] < 0) {
+      newOffsets[key] = totalDigits - DIGIT_VALUES;
+      }
+    });
     setOffsets(newOffsets);
-    setPreviousState({ fractional, digits });
+
+    // Batch state updates
+    // setPreviousState({ fractional, digits });
 
     // Apply transforms
     const stripOffsets = [newOffsets.hundreds, newOffsets.tens, newOffsets.units];
@@ -128,21 +138,9 @@ const Meter = () => {
     updateCounter();
   }, [value]);
 
-  const handleInc = useCallback(() => {
-    setValue(prev => Math.max(0, Number((prev + STEP).toFixed(3))));
-  }, []);
-
-  const handleDec = useCallback(() => {
-    setValue(prev => Math.max(0, Number((prev - STEP).toFixed(3))));
-  }, []);
-
-  const handleInc05 = useCallback(() => {
-    setValue(prev => Math.max(0, Number((prev + 0.5).toFixed(3))));
-  }, []);
-
-  const handleDec05 = useCallback(() => {
-    setValue(prev => Math.max(0, Number((prev - 0.5).toFixed(3))));
-  }, []);
+  useEffect(() => {
+    onChange?.(value);
+  }, [value, onChange]);
 
   return (
     <>
@@ -153,15 +151,13 @@ const Meter = () => {
         <div className="decimal-point">.</div>
         <div className="digit-wrapper" data-role="decimal"></div>
       </div>
-
-      <div className="controls">
-        <button id="dec" onClick={handleDec}>−0.01</button>
-        <button id="inc" onClick={handleInc}>+0.01</button>
-        <button id="dec05" onClick={handleDec05}>−0.5</button>
-        <button id="inc05" onClick={handleInc05}>+0.5</button>
-      </div>
     </>
   );
 };
 
 export default Meter;
+
+export const useMeter = (initialValue = 0) => {
+  const [value, setValue] = useState(initialValue);
+  return { value, setValue };
+};
