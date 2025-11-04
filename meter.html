@@ -16,8 +16,8 @@
   </div>
 
   <div class="controls">
-    <button id="dec">−0.01</button>
-    <button id="inc">+0.01</button>
+    <button id="dec">0.1</button>
+    <button id="inc">+0.1</button>
     <button id="dec05">−0.5</button>
     <button id="inc05">+0.5</button>
   </div>
@@ -25,7 +25,7 @@
   <script>
     const DIGIT_REPEAT = 20;
     const DIGIT_VALUES = 10;
-    const STEP = 0.01;
+    const STEP = 0.1;
     const MIN_VALUE = 0;
     const MAX_VALUE = 999.999;
 
@@ -57,6 +57,10 @@
 
     let decimalOffset = 0;
     let previousFractional = 0;
+    let hundredsOffset = 0;
+    let tensOffset = 0;
+    let unitsOffset = 0;
+    let previousDigits = [0, 0, 0];
 
     function updateCounter() {
       const safeValue = clamp(value, MIN_VALUE, MAX_VALUE);
@@ -74,8 +78,21 @@
         intPart % 10
       ];
 
+      for (let i = 2; i >= 0; i--) {
+        if (digits[i] < previousDigits[i]) {
+          if (i === 0) hundredsOffset += 10;
+          else if (i === 1) tensOffset += 10;
+          else unitsOffset += 10;
+        }
+      }
+      previousDigits = [...digits];
+
       digitStrips.slice(0, 3).forEach((strip, index) => {
-        strip.style.transform = `translateY(${-digits[index] * digitHeight}px)`;
+        let offset = 0;
+        if (index === 0) offset = hundredsOffset;
+        else if (index === 1) offset = tensOffset;
+        else offset = unitsOffset;
+        strip.style.transform = `translateY(${-(digits[index] + offset) * digitHeight}px)`;
       });
 
       const decimalPosition = fractional * 10 + decimalOffset;
@@ -93,7 +110,7 @@
     });
 
     document.getElementById('inc05').addEventListener('click', () => {
-      value = Number((value + 0.4).toFixed(3));
+      value = Number((value + 10.4).toFixed(3));
       updateCounter();
     });
 
