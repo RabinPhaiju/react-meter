@@ -23,7 +23,7 @@
   </div>
 
   <script>
-    const DIGIT_REPEAT = 2;
+    const DIGIT_REPEAT = 20;
     const DIGIT_VALUES = 10;
     const STEP = 0.01;
     const MIN_VALUE = 0;
@@ -51,14 +51,22 @@
       return strip;
     });
 
-    let value = 7.5;
+    let value = 7.53;
 
     const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+
+    let decimalOffset = 0;
+    let previousFractional = 0;
 
     function updateCounter() {
       const safeValue = clamp(value, MIN_VALUE, MAX_VALUE);
       const intPart = Math.floor(safeValue);
       const fractional = safeValue - intPart;
+
+      if (fractional < previousFractional) {
+        decimalOffset += 10;
+      }
+      previousFractional = fractional;
 
       const digits = [
         Math.floor(intPart / 100) % 10,
@@ -70,7 +78,7 @@
         strip.style.transform = `translateY(${-digits[index] * digitHeight}px)`;
       });
 
-      const decimalPosition = fractional * 10;
+      const decimalPosition = fractional * 10 + decimalOffset;
       digitStrips[3].style.transform = `translateY(${-decimalPosition * digitHeight}px)`;
     }
 
